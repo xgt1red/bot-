@@ -28,11 +28,13 @@ intents = discord.Intents.default()
 client  = discord.Client(intents=intents)
 tree    = app_commands.CommandTree(client)
 
-async def fetch_image(url: str) -> discord.File:
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as resp:
+async def fetch_image(url: str, ext: str) -> discord.File:
+    timeout = aiohttp.ClientTimeout(total=30)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.get(url, headers={"User-Agent": "Mozilla/5.0"}) as resp:
+            if resp.status != 200:
+                raise Exception("failed to fetch image")
             data = await resp.read()
-            ext  = url.split(".")[-1].split("?")[0]
             return discord.File(io.BytesIO(data), filename=f"image.{ext}")
 
 @tree.command(name="pfp", description=".")
@@ -42,9 +44,9 @@ async def pfp(interaction: discord.Interaction, id: str):
     try:
         user = await client.fetch_user(int(id))
         av   = user.avatar or user.default_avatar
-        fmt  = "gif" if av.is_animated() else "png"
-        url  = av.with_format(fmt).with_size(SIZE).url
-        file = await fetch_image(url)
+        ext  = "gif" if av.is_animated() else "png"
+        url  = av.with_format(ext).with_size(SIZE).url
+        file = await fetch_image(url, ext)
         await interaction.followup.send(file=file)
     except Exception:
         await interaction.followup.send("user not found", ephemeral=True)
@@ -63,7 +65,7 @@ async def banner(interaction: discord.Interaction, id: str):
             return
         ext  = "gif" if banner_hash.startswith("a_") else "png"
         url  = f"{CDN}/banners/{id}/{banner_hash}.{ext}?size={SIZE}"
-        file = await fetch_image(url)
+        file = await fetch_image(url, ext)
         await interaction.followup.send(file=file)
     except Exception:
         await interaction.followup.send("user not found", ephemeral=True)
