@@ -15,7 +15,6 @@
 import discord
 from discord import app_commands
 import aiohttp
-import io
 import os
 import sys
 
@@ -28,15 +27,6 @@ intents = discord.Intents.default()
 client  = discord.Client(intents=intents)
 tree    = app_commands.CommandTree(client)
 
-async def fetch_image(url: str, ext: str) -> discord.File:
-    timeout = aiohttp.ClientTimeout(total=30)
-    async with aiohttp.ClientSession(timeout=timeout) as session:
-        async with session.get(url, headers={"User-Agent": "Mozilla/5.0"}) as resp:
-            if resp.status != 200:
-                raise Exception("failed to fetch image")
-            data = await resp.read()
-            return discord.File(io.BytesIO(data), filename=f"image.{ext}")
-
 @tree.command(name="pfp", description=".")
 @app_commands.describe(id="id")
 async def pfp(interaction: discord.Interaction, id: str):
@@ -45,9 +35,7 @@ async def pfp(interaction: discord.Interaction, id: str):
         user = await client.fetch_user(int(id))
         av   = user.avatar or user.default_avatar
         ext  = "gif" if av.is_animated() else "png"
-        url  = av.with_format(ext).with_size(SIZE).url
-        file = await fetch_image(url, ext)
-        await interaction.followup.send(file=file)
+        await interaction.followup.send(av.with_format(ext).with_size(SIZE).url)
     except Exception:
         await interaction.followup.send("user not found", ephemeral=True)
 
@@ -63,10 +51,8 @@ async def banner(interaction: discord.Interaction, id: str):
         if not banner_hash:
             await interaction.followup.send("no banner found", ephemeral=True)
             return
-        ext  = "gif" if banner_hash.startswith("a_") else "png"
-        url  = f"{CDN}/banners/{id}/{banner_hash}.{ext}?size={SIZE}"
-        file = await fetch_image(url, ext)
-        await interaction.followup.send(file=file)
+        ext = "gif" if banner_hash.startswith("a_") else "png"
+        await interaction.followup.send(f"{CDN}/banners/{id}/{banner_hash}.{ext}?size={SIZE}")
     except Exception:
         await interaction.followup.send("user not found", ephemeral=True)
 
