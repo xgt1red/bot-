@@ -35,7 +35,8 @@ async def pfp(interaction: discord.Interaction, id: str):
         user = await client.fetch_user(int(id))
         av   = user.avatar or user.default_avatar
         ext  = "gif" if av.is_animated() else "png"
-        await interaction.followup.send(av.with_format(ext).with_size(SIZE).url)
+        url  = av.with_format(ext).with_size(SIZE).url
+        await interaction.followup.send(embed=discord.Embed().set_image(url=url))
     except Exception:
         await interaction.followup.send("user not found", ephemeral=True)
 
@@ -52,7 +53,8 @@ async def banner(interaction: discord.Interaction, id: str):
             await interaction.followup.send("no banner found", ephemeral=True)
             return
         ext = "gif" if banner_hash.startswith("a_") else "png"
-        await interaction.followup.send(f"{CDN}/banners/{id}/{banner_hash}.{ext}?size={SIZE}")
+        url = f"{CDN}/banners/{id}/{banner_hash}.{ext}?size={SIZE}"
+        await interaction.followup.send(embed=discord.Embed().set_image(url=url))
     except Exception:
         await interaction.followup.send("user not found", ephemeral=True)
 
